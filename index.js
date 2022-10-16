@@ -1,6 +1,6 @@
 'use strict';
 const http = require('http');
-const fs = require('fs');
+const pug = require('pug');
 const server = http
   .createServer((req, res) => {
     const now = new Date();
@@ -11,8 +11,37 @@ const server = http
 
     switch (req.method) {
       case 'GET':
-        const rs = fs.createReadStream('./form.html');
-        rs.pipe(res);
+        if (req.url === '/') {
+          res.write('<!DOCTYPE html><html lang="ja"><body>' +
+            '<h1>アンケートフォーム</h1>' +
+            '<a href="/enquetes">アンケート一覧</a>' +
+            '</body></html>');
+        } else if (req.url === '/enquetes') {
+          res.write('<!DOCTYPE html><html lang="ja"><body>' +
+            '<h1>アンケート一覧</h1><ul>' +
+            '<li><a href="/enquetes/yaki-shabu">焼き肉・しゃぶしゃぶ</a></li>' +
+            '<li><a href="/enquetes/rice-bread">ごはん・パン</a></li>' +
+            '<li><a href="/enquetes/sushi-pizza">寿司・ピザ</a></li>' +
+            '</ul></body></html>');
+        } else if (req.url === '/enquetes/yaki-shabu') {
+          res.write(pug.renderFile('./form.pug',{
+            path: req.url,
+            firstItem: '焼肉',
+            secondItem: 'しゃぶしゃぶ'
+          }));
+        }else if(req.url === '/enquetes/rice-bread'){
+          res.write(pug.renderFile('./form.pug', {
+            path: req.url,
+            firstItem: 'ごはん',
+            secondItem: 'パン'
+          }))
+        } else if(req.url === '/enquetes/sushi-pizza')
+        res.write(pug.renderFile('./form.pug', {
+          path: req.url,
+          firstItem: 'ピザ',
+          secondItem: '寿司'
+        }))
+        res.end();
         break;
       case 'POST':
         let rawData = '';
@@ -21,10 +50,11 @@ const server = http
             rawData += chunk;
           })
           .on('end', () => {
-            const decoded = decodeURIComponent(rawData);
-            console.info(`[${now}] 投稿: ${decoded}`);
+            const answer = new URLSearchParams(rawData);
+            const body = `${answer.get('name')}さんは${answer.get('favorite')}に投票しました`;
+            console.info(`[${now}] ${body}`);
             res.write(
-              `<!DOCTYPE html><html lang="ja"><body><h1>${decoded}が投稿されました</h1></body></html>`
+              `<!DOCTYPE html><html lang="ja"><body><h1>${body}</h1></body></html>`
             );
             res.end();
           });
